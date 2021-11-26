@@ -39,7 +39,7 @@ def makeLabels(csvPath="D:\\kaggle\\tensorflow-great-barrier-reef\\train.csv"):
 
 def moveFiles(txtPath='D:\\Projects\\kaggle\\labels\\*\\*.txt',
               imagePath="D:\\kaggle\\tensorflow-great-barrier-reef\\train_images",
-              dstPath="D:\\kaggle\\tensorflow-great-barrier-reef"):
+              dstPath="D:\\kaggle"):
     txtPaths = glob.glob(txtPath)
     dstPath = dstPath[:-1] if dstPath.endswith("\\") else dstPath
     dstTxtPath = dstPath + "\\trainData\\labels"
@@ -53,8 +53,60 @@ def moveFiles(txtPath='D:\\Projects\\kaggle\\labels\\*\\*.txt',
     for idx, pt in enumerate(txtPaths):
         fileName = pt.split("\\")[-2].split("_")[-1] + "_" + pt.split("\\")[-1].split(".")[0]
         shutil.copy(pt, dstTxtPath + f"\\{fileName}.txt")
-        shutil.copy(imagePath + "\\" + "\\".join(pt.split("\\")[-2:]).replace("txt", "jpg"), dstImagePath + f"\\{fileName}.jpg")
+        shutil.copy(imagePath + "\\" + "\\".join(pt.split("\\")[-2:]).replace("txt", "jpg"),
+                    dstImagePath + f"\\{fileName}.jpg")
+
+
+def generateYAML(path="D:\\kaggle\\kaggle", nc=1, names=None):
+    if names is None:
+        names = ["starfish"]
+    if nc != len(names):
+        raise "NUM OF CLASSES ERROR!"
+    if not os.path.exists(f"{path}\\images\\train"):
+        raise f"{path}\\images\\train NOT EXISTS!"
+    path = path[:-1] if path.endswith("\\") else path
+    fileName = path + "\\" + path.split("\\")[-1] + ".yaml"
+    with open(fileName, "w") as y:
+        y.write(f"train: {path}\\images\\train\\\nval: {path}\\images\\val\\\nnc: {nc}\nnames: {names}")
+
+
+def divide(imagePath, labelPath, stride, savePath):
+    """
+    :param savePath: path\\to\\save
+    :param imagePath: a glob path
+    :param labelPath: a glob path, too
+    :param stride:
+    :return: num of val
+    """
+    if savePath.endswith("\\"):
+        savePath = savePath[:-1]
+    os.mkdir(savePath + "\\" + "images")
+    os.mkdir(savePath + "\\" + "labels")
+    os.mkdir(savePath + "\\" + "images\\" + "train")
+    os.mkdir(savePath + "\\" + "images\\" + "val")
+    os.mkdir(savePath + "\\" + "labels\\" + "train")
+    os.mkdir(savePath + "\\" + "labels\\" + "val")
+    numVal = 0
+    imgPaths = glob.glob(imagePath)
+    labelPaths = glob.glob(labelPath)
+    for pathNum in range(len(labelPaths)):
+        if not os.path.exists(labelPaths[pathNum].replace("labels", "images").replace("txt", "jpg")):
+            print(labelPaths[pathNum].replace("labels", "images").replace("txt", "jpg") + "  No such file or directory")
+            continue
+        if pathNum % stride == 0:
+            shutil.copyfile(labelPaths[pathNum],
+                            f"{savePath}\\labels\\val\\" + labelPaths[pathNum].split("\\")[-1])
+            shutil.copyfile(labelPaths[pathNum].replace("labels", "images").replace("txt", "jpg"),
+                            f"{savePath}\\images\\val\\" + labelPaths[pathNum].split("\\")[-1].replace("txt", "jpg"))
+            numVal += 1
+        else:
+            shutil.copyfile(labelPaths[pathNum],
+                            f"{savePath}\\labels\\train\\" + labelPaths[pathNum].split("\\")[-1])
+            shutil.copyfile(labelPaths[pathNum].replace("labels", "images").replace("txt", "jpg"),
+                            f"{savePath}\\images\\train\\" + labelPaths[pathNum].split("\\")[-1].replace("txt", "jpg"))
+    return numVal
 
 
 if __name__ == "__main__":
-    showImages(fps=0)
+    # divide("D:\\kaggle\\trainData\\images\\*.jpg", "D:\\kaggle\\trainData\\labels\\*.txt", 8, "D:\\kaggle\\yoloData")
+    generateYAML()
